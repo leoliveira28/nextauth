@@ -70,7 +70,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 roles,
             })
             const apiDefaults = api.defaults as SmartAxiosDefaults;
-            apiDefaults.headers['Authorization'] = `Bearer ${token}`;
+            api.defaults.headers['Authorization'] = `Bearer ${token}`;
             Router.push('/dashboard');
           
         } catch (err){
