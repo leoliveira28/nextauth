@@ -8,7 +8,8 @@ type SignInCredentials = {
     password: string;
 }
 type AuthContextData = {
-    signIn(credentials: SignInCredentials): Promise<void>
+    signIn: (credentials: SignInCredentials) => Promise<void>
+    signOut: () => void;
     user: User;
     isAuthenticated: boolean; 
     
@@ -27,14 +28,30 @@ interface SmartAxiosDefaults<D = any> extends Omit<AxiosRequestConfig<D>, 'heade
     headers: HeadersDefaults & AxiosRequestHeaders;
   }
 export const AuthContext = createContext({} as AuthContextData);
+
+let authChannel: BroadcastChannel
+
 export function signOut(){
     destroyCookie(undefined, 'nextauth.token')
     destroyCookie(undefined, 'nextauth.refreshToken')
-
+    authChannel.postMessage('signOut');
     Router.push('/')
 }
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User>()
+
+    useEffect(() => {
+        authChannel = new BroadcastChannel('auth')
+    authChannel.onmessage = (message) => {
+        switch (message.data) {
+            case 'signOut':
+                signOut();
+                break;
+                default:
+                    break;
+        }
+    }    },[])
+
     const isAuthenticated = !!user
     useEffect(() => {
         const { 'nextauth.token': token} = parseCookies()
@@ -69,7 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 permissions,
                 roles,
             })
-            const apiDefaults = api.defaults as SmartAxiosDefaults;
+            
             api.defaults.headers['Authorization'] = `Bearer ${token}`;
             Router.push('/dashboard');
           
@@ -81,7 +98,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     }
     return (
-        <AuthContext.Provider value={{signIn, isAuthenticated, user}} >
+        <AuthContext.Provider value={{signIn, isAuthenticated, user, signOut}} >
             {children}
         </AuthContext.Provider>
     )
